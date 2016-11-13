@@ -88,7 +88,7 @@ class Editor(QDialog):
 		self.MovePicList.clear()
 		self.MoveInitDir.setText("")
 			
-	def onCurrentPictChanged(self, itemPrevious, itemCurrent):
+	def onCurrentPictChanged(self, itemCurrent, itemPrevious):
 		if itemCurrent:
 			self.LoadPicture(itemCurrent.data(Qt.UserRole))
 			
@@ -99,7 +99,8 @@ class Editor(QDialog):
 	def onMoveFolderClicked(self, button):
 		print(button.property("MovePath"))
 		
-		if self.MovePicList.currentRow() == -1:
+		currentRow = self.MovePicList.currentRow()
+		if currentRow == -1:
 			return
 		
 		#currentItem = self.MovePicList.currentItem()
@@ -107,6 +108,8 @@ class Editor(QDialog):
 		#imgName = currentItem.text()
 		#print(path)
 		#print(imgName)
+		
+		self.MovePicList.setCurrentRow(currentRow+1)
 		
 	def resizeEvent(self, sizeEvent):
 		super(Editor, self).resizeEvent(sizeEvent)
