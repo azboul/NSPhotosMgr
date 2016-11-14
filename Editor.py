@@ -8,6 +8,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
+import xmlrpc.client
+
 class Editor(QDialog):
 	def __init__(self):
 		super(Editor, self).__init__()
@@ -19,7 +21,10 @@ class Editor(QDialog):
 		
 		self.tabWidget = QTabWidget(self)
 		Layout.addWidget(self.tabWidget)
-				
+
+		#		
+		# Move pictures section
+		# 
 		self.PictMoveTab = QWidget()
 		self.PictMoveLayout = QHBoxLayout()
 		self.PictMoveTab.setLayout(self.PictMoveLayout)
@@ -30,7 +35,7 @@ class Editor(QDialog):
 		self.PictMoveParam.setLayout(gridLayout)
 		self.MoveInitDir = QLineEdit(self.PictMoveParam)
 		self.MoveInitButton = QPushButton("Choisir dossier")
-		self.MoveInitButton.clicked.connect(self.movePict_loadPictures)
+		self.MoveInitButton.clicked.connect(self.OnLoadAllPictures)
 		self.MovePicList = QListWidget(self.PictMoveParam)
 		self.MovePicList.setObjectName("movePicList")
 		self.MovePicList.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -41,14 +46,6 @@ class Editor(QDialog):
 
 		self.PictMoveLabel = QLabel(self.PictMoveTab)
 		self.PictMoveLabel.setText("Picture preview")
-		#self.PictMoveKeys = QTableWidget(self.PictMoveParam)
-		#self.PictMoveKeys.setColumnCount(2)
-		#self.PictMoveKeys.setRowCount(10)		
-		#headerLabels = ["Sous-dossier", "Touche clavier"]
-		#self.PictMoveKeys.setHorizontalHeaderLabels(headerLabels)
-		#self.PictMoveKeys.setSelectionBehavior(QAbstractItemView.SelectRows)
-		#self.PictMoveKeys.setSelectionMode(QAbstractItemView.SingleSelection)
-		#gridLayout.addWidget(self.PictMoveKeys, 2, 0)
 		
 		self.groupBox = QGroupBox(self.PictMoveTab)
 		self.groupBox.setTitle("Copier les photos")
@@ -63,13 +60,32 @@ class Editor(QDialog):
 		self.addButton.clicked.connect(self.AddMoveButton)
 		gridLayout.addWidget(self.addButton, 3, 0)
 		
-		# self.PictMoveLabel.installEventFilter(self)		
-
 		self.PictMoveLayout.addWidget(self.PictMoveLabel, 3)
 		self.tabWidget.addTab(self.PictMoveTab, "Moving Pictures")
-		
+
+		#
+		# Batch processing
+		#
+
+		self.PicProcessTab = QWidget()
+		self.PicProcessLayout = QVBoxLayout()
+		self.PicProcessTab.setLayout(self.PicProcessLayout)
+
+		self.ServerLayout = QHBoxLayout() 
+		self.PicProcessLayout.addLayout(self.ServerLayout)
+
+		self.ConnectButton = QPushButton()
+		self.ConnectButton.setText("Connection")
+		self.ConnectButton.clicked.connect(self.CheckServerConnection)
+		self.ServerLayout.addWidget(self.ConnectButton)
+
+		self.ConnectStatus = QLabel()
+		self.ConnectStatus.setText("Pas de connection au server")
+		self.ServerLayout.addWidget(self.ConnectStatus)
+
+		self.tabWidget.addTab(self.PicProcessTab, "Pictures Processing")
 	
-	def movePict_loadPictures(self):
+	def OnLoadAllPictures(self):
 		picturePath = QFileDialog.getExistingDirectory(self.MoveInitButton, "Choisir un dossier")
 		if not picturePath:
 			return
@@ -128,7 +144,16 @@ class Editor(QDialog):
 		newMoveButton.setProperty("MovePath", subFolder)
 		self.groupBox.layout().addWidget(newMoveButton)
 		
-		self.moveButtonGroup.addButton(newMoveButton)		
+		self.moveButtonGroup.addButton(newMoveButton)
+
+	def CheckServerConnection(self):
+		self.server = xmlrpc.client.ServerProxy('http://localhost:8000')
+		# print(s.pow(2,3))  # Returns 2**3 = 8
+		# print(s.add(2,3))  # Returns 5
+		# print(s.mul(5,2))  # Returns 5*2 = 10
+		if self.server.IsConnect():
+			self.ConnectStatus.setText("Connecté au serveur")
+
 
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
