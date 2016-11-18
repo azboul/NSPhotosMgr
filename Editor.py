@@ -3,12 +3,58 @@
 
 import sys
 import os
+from shutil import copy2
 from os.path import isfile, join
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
 import xmlrpc.client
+
+class CustomDelegate(QStyledItemDelegate):
+	def __init__(self, parent):
+		super(CustomDelegate, self).__init__(parent)
+		self.PathList= list()
+		
+	def paint(self, painter, option, index):
+		#super(CustomDelegate, self).paint(painter, option, index)
+		painter.save()
+
+		# Background style
+		painter.setPen(QPen(Qt.NoPen))
+		if option.state & QStyle.State_Selected:
+			painter.setBrush(QColor("#3399FF"))
+		elif option.state & QStyle.State_Selected:
+			painter.setBrush(QColor(Qt.darkBlue))
+		else:
+			painter.setBrush(QBrush(Qt.white))
+		painter.drawRect(option.rect)
+		
+		# Text style
+		text = index.data(Qt.DisplayRole)
+		if self.IsInPaths(text):
+			painter.setPen(QPen(Qt.lightGray))
+			f = painter.font()
+			f.setItalic(True)
+			painter.setFont(f)
+		elif option.state & QStyle.State_Selected or option.state & QStyle.State_MouseOver:
+			painter.setPen(QPen(Qt.white))
+		else:
+			painter.setPen(QPen(Qt.black))
+		painter.translate(3, 0)
+		painter.drawText(option.rect, Qt.AlignLeft, text)
+		
+		painter.restore()
+
+	def IsInPaths(self, filename):
+		for path in self.PathList:
+			if os.path.isfile(join(path, filename)):
+				return True
+		return False
+
+	def AddPath(self, path):
+		self.PathList.append(path)
+	
 
 class Editor(QDialog):
 	def __init__(self):
@@ -37,8 +83,11 @@ class Editor(QDialog):
 		self.MoveInitButton = QPushButton("Choisir dossier")
 		self.MoveInitButton.clicked.connect(self.OnLoadAllPictures)
 		self.MovePicList = QListWidget(self.PictMoveParam)
+		#self.MovePicList = FolderListView()
 		self.MovePicList.setObjectName("movePicList")
 		self.MovePicList.setSelectionMode(QAbstractItemView.SingleSelection)
+		self.delegate = CustomDelegate(self)
+		self.MovePicList.setItemDelegateForColumn(0, self.delegate)
 		self.MovePicList.currentItemChanged.connect(self.onCurrentPictChanged)
 		gridLayout.addWidget(self.MoveInitDir, 0, 0, 1, 2)
 		gridLayout.addWidget(self.MoveInitButton, 0, 2)
@@ -84,15 +133,26 @@ class Editor(QDialog):
 		self.ServerLayout.addWidget(self.ConnectStatus)
 
 		self.tabWidget.addTab(self.PicProcessTab, "Pictures Processing")
+
+		self.LoadAllPictures("/home/nico/Images/Photo_Guillaume")
 	
 	def OnLoadAllPictures(self):
 		picturePath = QFileDialog.getExistingDirectory(self.MoveInitButton, "Choisir un dossier")
 		if not picturePath:
 			return
+		LoadAllPictures(picturePath)
+
+	def LoadAllPictures(self, picturePath):
 		self.ClearMoveData()
 		self.MoveInitDir.setText(picturePath)		
 		row=0
 		onlyfiles = [f for f in os.listdir(picturePath) if isfile(join(picturePath, f)) and f.endswith(".JPG")]
+		
+		fileNameList = list()
+		for f in onlyfiles:
+			fileNameList.append(os.path.basename(f))
+
+		#self.MovePicList.SetList(f)
 		for f in onlyfiles:
 			item = QListWidgetItem()
 			item.setText(os.path.basename(f))
@@ -113,18 +173,14 @@ class Editor(QDialog):
 		self.PictMoveLabel.setPixmap(pix.scaled(self.PictMoveLabel.size(), Qt.KeepAspectRatio))
 		
 	def onMoveFolderClicked(self, button):
-		print(button.property("MovePath"))
-		
 		currentRow = self.MovePicList.currentRow()
 		if currentRow == -1:
 			return
+		currentItem = self.MovePicList.currentItem()		
+		fromPath = currentItem.data(Qt.UserRole)
+		destPath = button.property("MovePath") + "/"
 		
-		#currentItem = self.MovePicList.currentItem()
-		#path = currentItem.data(Qt.UserRole)
-		#imgName = currentItem.text()
-		#print(path)
-		#print(imgName)
-		
+		copy2(fromPath, destPath)
 		self.MovePicList.setCurrentRow(currentRow+1)
 		
 	def resizeEvent(self, sizeEvent):
@@ -146,12 +202,14 @@ class Editor(QDialog):
 		
 		self.moveButtonGroup.addButton(newMoveButton)
 
+		self.delegate.AddPath(subFolder)
+
 	def CheckServerConnection(self):
 		self.server = xmlrpc.client.ServerProxy('http://localhost:8000')
 		# print(s.pow(2,3))  # Returns 2**3 = 8
 		# print(s.add(2,3))  # Returns 5
 		# print(s.mul(5,2))  # Returns 5*2 = 10
-		if self.server.IsConnect():
+		if self.server.is_even(14):
 			self.ConnectStatus.setText("Connecté au serveur")
 
 
