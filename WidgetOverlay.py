@@ -11,8 +11,8 @@ class WidgetOverlay(QWidget):
 	# Signal emiited when the close button is pressed
 	widgetRemoved = pyqtSignal()
 
-	def __init__(self):
-		super(WidgetOverlay, self).__init__()
+	def __init__( self, parent = None):
+		super(WidgetOverlay, self).__init__(parent)
 		self.setupUi()
 
 	def setupUi(self):
@@ -36,6 +36,9 @@ class WidgetOverlay(QWidget):
 		self.layout().addWidget(self.m_Widget)
 		self.m_Widget.lower()
 		#self.m_Widget.installEventFilter(self)
+
+	def GetWidget(self):
+		return self.m_Widget
 
 #	def eventFilter(self, object, event):
 #		if self.m_Widget == object:
@@ -63,6 +66,7 @@ class WidgetOverlay(QWidget):
 	def RemoveWidget(self):
 		self.parentWidget().layout().removeWidget(self)
 		self.hide()
+		self.deleteLater()
 		# emit the signal
 		self.widgetRemoved.emit()
 

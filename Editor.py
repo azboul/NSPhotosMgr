@@ -9,13 +9,19 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
+from WidgetOverlay import WidgetOverlay
+
 import xmlrpc.client
 
 class CustomDelegate(QStyledItemDelegate):
+	"""
+		Customization of the list of pictures to easily
+		display already copied pictures.
+	"""
 	def __init__(self, parent):
 		super(CustomDelegate, self).__init__(parent)
-		self.PathList= list()
-		
+		self.PathList = list()
+
 	def paint(self, painter, option, index):
 		#super(CustomDelegate, self).paint(painter, option, index)
 		painter.save()
@@ -54,6 +60,9 @@ class CustomDelegate(QStyledItemDelegate):
 
 	def AddPath(self, path):
 		self.PathList.append(path)
+
+	def RemovePath(self, path):
+		self.PathList.remove(path)
 	
 
 class Editor(QDialog):
@@ -62,6 +71,8 @@ class Editor(QDialog):
 		self.setupUi()
 
 	def setupUi(self):
+		self.setWindowIcon(QIcon("./resources/AppIcon.svg"))
+
 		Layout = QVBoxLayout()
 		self.setLayout(Layout)
 		
@@ -100,6 +111,13 @@ class Editor(QDialog):
 		self.groupBox.setTitle("Copier les photos")
 		self.groupBox.setLayout(QVBoxLayout())
 		gridLayout.addWidget(self.groupBox, 2, 0)
+
+		self.moveUpDown = QSpinBox(self)
+		self.moveUpDown.setRange(-10000,10000)
+		self.moveUpDown.findChild(QLineEdit).hide()
+		self.groupBox.layout().addWidget(self.moveUpDown)
+		self.moveUpDown.valueChanged.connect(self.UpdateCurrentImage)
+		self.m_LastUpDownValue = self.moveUpDown.value()
 		
 		self.moveButtonGroup = QButtonGroup()
 		self.moveButtonGroup.buttonClicked.connect(self.onMoveFolderClicked)
@@ -160,6 +178,8 @@ class Editor(QDialog):
 			self.MovePicList.insertItem(row,item)
 			row = row+1
 
+		self.MovePicList.setCurrentRow(0)
+
 	def ClearMoveData(self):
 		self.MovePicList.clear()
 		self.MoveInitDir.setText("")
@@ -198,11 +218,28 @@ class Editor(QDialog):
 		newMoveButton.setText(subFolder.split('/')[-1])
 		newMoveButton.setToolTip(subFolder)
 		newMoveButton.setProperty("MovePath", subFolder)
-		self.groupBox.layout().addWidget(newMoveButton)
-		
+
+		widgetOverlay = WidgetOverlay(self)
+		widgetOverlay.SetWidget(newMoveButton)
+		widgetOverlay.widgetRemoved.connect(self.OnRemoveButton)
+		self.groupBox.layout().addWidget(widgetOverlay)
 		self.moveButtonGroup.addButton(newMoveButton)
 
 		self.delegate.AddPath(subFolder)
+
+	def OnRemoveButton(self):
+		self.delegate.RemovePath(self.sender().GetWidget().property("MovePath"))
+
+	def UpdateCurrentImage(self, value):
+		if value == self.m_LastUpDownValue:
+			return
+		isUp = value > self.m_LastUpDownValue
+		delta = -1
+		if isUp:
+			delta = 1
+		self.MovePicList.setCurrentRow(self.MovePicList.currentRow()+delta)
+		self.m_LastUpDownValue = value
+
 
 	def CheckServerConnection(self):
 		self.server = xmlrpc.client.ServerProxy('http://localhost:8000')
