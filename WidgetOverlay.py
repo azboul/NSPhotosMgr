@@ -18,6 +18,10 @@ class WidgetOverlay(QWidget):
 	def setupUi(self):
 		self.setLayout(QVBoxLayout())
 		self.setObjectName("widgetOverlay")
+		
+		self.setProperty("SelectMode", False)
+		self.setProperty("Selected", False)
+		self.setFocusPolicy(Qt.StrongFocus)
 
 		# Configure the close button
 		self.m_CloseButton = QToolButton(self)
@@ -35,26 +39,48 @@ class WidgetOverlay(QWidget):
 		self.m_Widget = widget
 		self.layout().addWidget(self.m_Widget)
 		self.m_Widget.lower()
-		#self.m_Widget.installEventFilter(self)
+		self.setFocusProxy(self.m_Widget)
+		self.m_Widget.installEventFilter(self)
 
 	def GetWidget(self):
 		return self.m_Widget
 
-#	def eventFilter(self, object, event):
-#		if self.m_Widget == object:
-#			if event.type() == QEvent.FocusIn:
-#				print("Focus In")
-#				return True
-#			elif event.type() == QEvent.FocusOut:
-#				print("Focus Out")
-#				return True
-#		return False
+	def eventFilter(self, object, event):
+		if self.m_Widget == object and self.property("SelectMode") == True:
+			if event.type() == QEvent.MouseButtonPress:
+				print("QEvent.MouseButtonPress " + str(self.property("Selected")))
+				return True
+			elif event.type() == QEvent.FocusIn:
+				print("QEvent.FocusIn " + str(self.property("Selected")))
+				self.ToggleSlectionMode()
+				return True
+			elif event.type() == QEvent.FocusOut:
+				print("QEvent.FocusOut " + str(self.property("Selected")))
+				self.ToggleSlectionMode()
+			elif event.type() == QEvent.MouseButtonRelease:
+				print("QEvent.MouseButtonRelease " + str(self.property("Selected")))
+				return True
+			elif event.type() == QEvent.MouseButtonDblClick:
+				print("QEvent.MouseButtonDblClick " + str(self.property("Selected")))
+		return super(WidgetOverlay,self).eventFilter(object, event)
 
 	def resizeEvent(self, event):
 		self.MoveCloseButton()
 
 	def enterEvent(self, event):
 		self.m_CloseButton.show()
+
+	def mousePressEvent(self, event):
+		# print("WidgetOverlay : mousePress")
+		super(WidgetOverlay, self).mousePressEvent(event)
+
+	def mouseReleaseEvent(self, event):
+		# print("WidgetOverlay : mouseRelease")
+		super(WidgetOverlay, self).mouseReleaseEvent(event)
+
+	def mouseDoubleClickEvent(self, event):
+		# print("WidgetOverlay : mouseDoubleClick")
+		super(WidgetOverlay, self).mouseDoubleClickEvent(event)
 
 	def leaveEvent(self, event):
 		self.m_CloseButton.hide()
@@ -69,6 +95,16 @@ class WidgetOverlay(QWidget):
 		self.deleteLater()
 		# emit the signal
 		self.widgetRemoved.emit()
+
+	def ToggleSlectionMode(self):
+		self.setProperty("Selected", not self.property("Selected"))
+		self.UpdateStyle()
+
+	def UpdateStyle(self):
+		if self.property("Selected") == True:
+			self.setStyleSheet("background-color: rgba(0,150,0,10);")
+		else:
+			self.setStyleSheet("")
 
 def MakeWidgetOverlay(parent, widget):
 	editorWidget = WidgetOverlay()

@@ -10,6 +10,7 @@ from WidgetOverlay import WidgetOverlay
 
 def MakeWidgetOverlay(parent, widget):
 	editorWidget = WidgetOverlay()
+	editorWidget.setProperty("SelectMode", True)
 	editorWidget.SetWidget(widget)
 	editorWidget.setMouseTracking(True)
 	return editorWidget

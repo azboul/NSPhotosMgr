@@ -32,6 +32,8 @@ class CustomDelegate(QStyledItemDelegate):
 			painter.setBrush(QColor("#3399FF"))
 		elif option.state & QStyle.State_Selected:
 			painter.setBrush(QColor(Qt.darkBlue))
+		elif option.state & QStyle.State_Selected:
+			painter.setBrush(QColor(Qt.lightBlue))			
 		else:
 			painter.setBrush(QBrush(Qt.white))
 		painter.drawRect(option.rect)
@@ -91,10 +93,12 @@ class Editor(QDialog):
 		gridLayout = QGridLayout()
 		self.PictMoveParam.setLayout(gridLayout)
 		self.MoveInitDir = QLineEdit(self.PictMoveParam)
-		self.MoveInitButton = QPushButton("Choisir dossier")
+		self.MoveInitButton = QToolButton()
+		self.MoveInitButton.setText("Choisir dossier")
+		self.MoveInitButton.setToolTip(self.MoveInitButton.text())
+		self.MoveInitButton.setIcon(QIcon("./resources/FolderIcon.svg"))
 		self.MoveInitButton.clicked.connect(self.OnLoadAllPictures)
 		self.MovePicList = QListWidget(self.PictMoveParam)
-		#self.MovePicList = FolderListView()
 		self.MovePicList.setObjectName("movePicList")
 		self.MovePicList.setSelectionMode(QAbstractItemView.SingleSelection)
 		self.delegate = CustomDelegate(self)
@@ -106,28 +110,36 @@ class Editor(QDialog):
 
 		self.PictMoveLabel = QLabel(self.PictMoveTab)
 		self.PictMoveLabel.setText("Picture preview")
-		
-		self.groupBox = QGroupBox(self.PictMoveTab)
-		self.groupBox.setTitle("Copier les photos")
-		self.groupBox.setLayout(QVBoxLayout())
-		gridLayout.addWidget(self.groupBox, 2, 0)
 
-		self.moveUpDown = QSpinBox(self)
-		self.moveUpDown.setRange(-10000,10000)
-		self.moveUpDown.findChild(QLineEdit).hide()
-		self.groupBox.layout().addWidget(self.moveUpDown)
-		self.moveUpDown.valueChanged.connect(self.UpdateCurrentImage)
-		self.m_LastUpDownValue = self.moveUpDown.value()
-		
+		self.UpDownWidget = QWidget(self)
+		self.UpDownWidget.setLayout(QVBoxLayout())
+		self.UpButton = QToolButton()
+		self.UpDownWidget.layout().addWidget(self.UpButton)
+		self.UpButton.setIcon(QIcon("./resources/UpIcon.svg"))
+		self.DownButton = QToolButton()
+		self.UpDownWidget.layout().addWidget(self.DownButton)
+		self.DownButton.setIcon(QIcon("./resources/DownIcon.svg"))
+		self.UpButton.clicked.connect(self.UpdateCurrentImage)
+		self.DownButton.clicked.connect(self.UpdateCurrentImage)
+		gridLayout.addWidget(self.UpDownWidget, 2, 0, 1, 3)
+		gridLayout.setAlignment(self.UpDownWidget, Qt.AlignHCenter)
+
+		self.groupBox = QGroupBox(self.PictMoveTab)
+		self.groupBox.setTitle("Copier les photos vers...")
+		self.groupBox.setLayout(QVBoxLayout())
+		gridLayout.addWidget(self.groupBox, 3, 0, 1, 3)
+
 		self.moveButtonGroup = QButtonGroup()
 		self.moveButtonGroup.buttonClicked.connect(self.onMoveFolderClicked)
 		
-		self.addButton = QPushButton()
-		self.addButton.setText("+")
+		self.addButton = QToolButton()
+		self.addButton.setText("Ajouter un dossier")
+		self.addButton.setIcon(QIcon("./resources/AddIcon.svg"))
+		self.addButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 		self.addButton.clicked.connect(self.AddMoveButton)
-		gridLayout.addWidget(self.addButton, 3, 0)
+		self.groupBox.layout().addWidget(self.addButton)
 		
-		self.PictMoveLayout.addWidget(self.PictMoveLabel, 3)
+		self.PictMoveLayout.addWidget(self.PictMoveLabel, 4)
 		self.tabWidget.addTab(self.PictMoveTab, "Moving Pictures")
 
 		#
@@ -152,13 +164,13 @@ class Editor(QDialog):
 
 		self.tabWidget.addTab(self.PicProcessTab, "Pictures Processing")
 
-		self.LoadAllPictures("/home/nico/Images/Photo_Guillaume")
+		# self.LoadAllPictures("/home/nico/Images/Photo_Guillaume")
 	
 	def OnLoadAllPictures(self):
 		picturePath = QFileDialog.getExistingDirectory(self.MoveInitButton, "Choisir un dossier")
 		if not picturePath:
 			return
-		LoadAllPictures(picturePath)
+		self.LoadAllPictures(picturePath)
 
 	def LoadAllPictures(self, picturePath):
 		self.ClearMoveData()
@@ -230,16 +242,13 @@ class Editor(QDialog):
 	def OnRemoveButton(self):
 		self.delegate.RemovePath(self.sender().GetWidget().property("MovePath"))
 
-	def UpdateCurrentImage(self, value):
-		if value == self.m_LastUpDownValue:
-			return
-		isUp = value > self.m_LastUpDownValue
-		delta = -1
-		if isUp:
+	def UpdateCurrentImage(self):
+		if self.sender() == self.UpButton:
+			delta = -1
+		else:
 			delta = 1
-		self.MovePicList.setCurrentRow(self.MovePicList.currentRow()+delta)
-		self.m_LastUpDownValue = value
 
+		self.MovePicList.setCurrentRow(self.MovePicList.currentRow()+delta)
 
 	def CheckServerConnection(self):
 		self.server = xmlrpc.client.ServerProxy('http://localhost:8000')
@@ -253,6 +262,6 @@ class Editor(QDialog):
 if __name__ == '__main__':
 	app = QApplication(sys.argv)
 	editor = Editor()
-	editor.show()
-	#editor.showMaximized()
+	# editor.show()
+	editor.showMaximized()
 	sys.exit(app.exec_())
